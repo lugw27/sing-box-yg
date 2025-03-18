@@ -10,7 +10,7 @@ yellow() { echo -e "\e[1;33m$1\033[0m"; }
 purple() { echo -e "\e[1;35m$1\033[0m"; }
 reading() { read -p "$(red "$1")" "$2"; }
 USERNAME=$(whoami | tr '[:upper:]' '[:lower:]')
-snb=$(hostname | awk -F '.' '{print $1}')
+snb=$(hostname | cut -d. -f1)
 nb=$(hostname | cut -d '.' -f 1 | tr -d 's')
 HOSTNAME=$(hostname)
 hona=$(hostname | cut -d. -f2)
@@ -97,9 +97,9 @@ resservsb
 green "端口替换完成！"
 ps aux | grep '[r]un -c con' > /dev/null && green "主进程启动成功，单节点用户修改下客户端三协议端口" || yellow "Sing-box主进程启动失败"
 if [ -f "$WORKDIR/boot.log" ]; then
-ps aux | grep '[t]unnel --u' > /dev/null && green "Argo临时隧道启动成功，单节点用户在客户端host/sni更换临时域名" || yellow "Argo临时隧道启动失败"
+ps aux | grep '[t]unnel --u' > /dev/null && green "Argo临时隧道已启动，临时域名可能已变更" || yellow "Argo临时隧道启动失败"
 else
-ps aux | grep '[t]unnel --n' > /dev/null && green "Argo固定隧道启动成功" || yellow "Argo固定隧道启动失败，请先在CF更改隧道端口：$vmess_port，再重启下Argo隧道"
+ps aux | grep '[t]unnel --n' > /dev/null && green "Argo固定隧道已启动" || yellow "Argo固定隧道启动失败，请先在CF更改隧道端口：$vmess_port，再重启下Argo隧道"
 fi
 fi
 }
@@ -620,7 +620,7 @@ vmatls_link="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"$snb-vmess-ws-tls-argo-$U
 echo "$vmatls_link" >> jh.txt
 vma_link="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"$snb-vmess-ws-argo-$USERNAME\", \"add\": \"icook.hk\", \"port\": \"8880\", \"id\": \"$UUID\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$UUID-vm?ed=2048\", \"tls\": \"\"}" | base64 -w0)"
 echo "$vma_link" >> jh.txt
-hy2_link="hysteria2://$UUID@$IP:$hy2_port?sni=www.bing.com&alpn=h3&insecure=1#$snb-hy2-$USERNAME"
+hy2_link="hysteria2://$UUID@$IP:$hy2_port?security=tls&sni=www.bing.com&alpn=h3&insecure=1#$snb-hy2-$USERNAME"
 echo "$hy2_link" >> jh.txt
 baseurl=$(base64 -w 0 < jh.txt)
 
@@ -1229,11 +1229,13 @@ green() { echo -e "\e[1;32m$1\033[0m"; }
 yellow() { echo -e "\e[1;33m$1\033[0m"; }
 purple() { echo -e "\e[1;35m$1\033[0m"; }
 USERNAME=$(whoami | tr '\''[:upper:]'\'' '\''[:lower:]'\'')
-WORKDIR="${HOME}/domains/${USERNAME}.${hona}.net/logs"
-snb=$(hostname | awk -F '\''.'\'' '\''{print $1}'\'')
+WORKDIR="${HOME}/domains/${USERNAME}.serv00.net/logs"
+snb=$(hostname | cut -d. -f1)
+hona=$(hostname | cut -d. -f2)
 ' > webport.sh
 declare -f resallport >> webport.sh
 declare -f check_port >> webport.sh
+declare -f resservsb >> webport.sh
 echo 'resallport' >> webport.sh
 chmod +x webport.sh
 green "开始安装多功能主页，请稍等……"

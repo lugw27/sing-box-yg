@@ -1,3 +1,4 @@
+
 #!/bin/bash
 # 定义颜色
 re="\033[0m"
@@ -25,7 +26,7 @@ export resport=${resport:-''}
 devil binexec on >/dev/null 2>&1
 USERNAME=$(whoami | tr '[:upper:]' '[:lower:]')
 HOSTNAME=$(hostname)
-snb=$(hostname | awk -F '.' '{print $1}')
+snb=$(hostname | cut -d. -f1)
 nb=$(hostname | cut -d '.' -f 1 | tr -d 's')
 if [[ "$reset" =~ ^[Yy]$ ]]; then
 bash -c 'ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk "{print \$2}" | xargs -r kill -9 >/dev/null 2>&1' >/dev/null 2>&1
@@ -113,7 +114,7 @@ sed -i '' "102s/$vmp/$vmess_port/g" $WORKDIR/config.json
 sed -i '' -e "17s|'$vlp'|'$vless_port'|" serv00keep.sh
 sed -i '' -e "18s|'$vmp'|'$vmess_port'|" serv00keep.sh
 sed -i '' -e "19s|'$hyp'|'$hy2_port'|" serv00keep.sh
-bash -c 'ps aux | grep $(whoami) | grep -v "sshd\|bash\|grep" | awk "{print \$2}" | xargs -r kill -9 >/dev/null 2>&1' >/dev/null 2>&1
+ps aux | grep '[r]un -c con' | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
 sleep 1
 curl -sk "http://${snb}.${USERNAME}.serv00.net/up" > /dev/null 2>&1
 sleep 5
@@ -238,7 +239,6 @@ get_argodomain() {
   fi
 }
 
-
 if [ ! -f serv00keep.sh ]; then
 curl -sSL https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/serv00keep.sh -o serv00keep.sh && chmod +x serv00keep.sh
 echo '#!/bin/bash
@@ -248,7 +248,7 @@ yellow() { echo -e "\e[1;33m$1\033[0m"; }
 purple() { echo -e "\e[1;35m$1\033[0m"; }
 USERNAME=$(whoami | tr '\''[:upper:]'\'' '\''[:lower:]'\'')
 WORKDIR="${HOME}/domains/${USERNAME}.serv00.net/logs"
-snb=$(hostname | awk -F '\''.'\'' '\''{print $1}'\'')
+snb=$(hostname | cut -d. -f1)
 ' > webport.sh
 declare -f resallport >> webport.sh
 declare -f check_port >> webport.sh
@@ -286,7 +286,6 @@ fi
 check_port
 fi
 rm -rf $HOME/domains/${snb}.${USERNAME}.serv00.net/logs/*
-
 
 cd $WORKDIR
 ym=("$HOSTNAME" "cache$nb.serv00.com" "web$nb.serv00.com")
@@ -641,10 +640,18 @@ else
 fi
 fi
 }
-if [ -z "$ARGO_DOMAIN" ] && ! ps aux | grep '[t]unnel --u' > /dev/null; then
+
+if [ -f "$WORKDIR/boot.log" ]; then
+argosl=$(cat "$WORKDIR/boot.log" 2>/dev/null | grep -a trycloudflare.com | awk 'NR==2{print}' | awk -F// '{print $2}' | awk '{print $1}')
+checkhttp=$(curl -o /dev/null -s -w "%{http_code}\n" "https://$argosl")
+else
+argogd=$(cat $WORKDIR/ARGO_DOMAIN.log 2>/dev/null)
+checkhttp=$(curl --max-time 2 -o /dev/null -s -w "%{http_code}\n" "https://$argogd")
+fi
+if ([ -z "$ARGO_DOMAIN" ] && ! ps aux | grep '[t]unnel --u' > /dev/null) || [ "$checkhttp" -ne 404 ]; then
 ps aux | grep '[t]unnel --u' | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
 cfgo
-elif [ -n "$ARGO_DOMAIN" ] && ! ps aux | grep '[t]unnel --n' > /dev/null; then
+elif ([ -n "$ARGO_DOMAIN" ] && ! ps aux | grep '[t]unnel --n' > /dev/null) || [ "$checkhttp" -ne 404 ]; then
 ps aux | grep '[t]unnel --n' | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
 cfgo
 else
@@ -670,7 +677,7 @@ vmatls_link="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"$snb-vmess-ws-tls-argo-$U
 echo "$vmatls_link" >> jh.txt
 vma_link="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"$snb-vmess-ws-argo-$USERNAME\", \"add\": \"icook.hk\", \"port\": \"8880\", \"id\": \"$UUID\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$argodomain\", \"path\": \"/$UUID-vm?ed=2048\", \"tls\": \"\"}" | base64 -w0)"
 echo "$vma_link" >> jh.txt
-hy2_link="hysteria2://$UUID@$IP:$hy2_port?sni=www.bing.com&alpn=h3&insecure=1#$snb-hy2-$USERNAME"
+hy2_link="hysteria2://$UUID@$IP:$hy2_port?security=tls&sni=www.bing.com&alpn=h3&insecure=1#$snb-hy2-$USERNAME"
 echo "$hy2_link" >> jh.txt
 baseurl=$(base64 -w 0 < jh.txt)
 
@@ -1233,5 +1240,4 @@ EOF
 cat list.txt
 sleep 2
 rm -rf sb.log core tunnel.yml tunnel.json fake_useragent_0.2.0.json
-
 cd
