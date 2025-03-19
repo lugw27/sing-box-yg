@@ -1,4 +1,3 @@
-
 #!/bin/bash
 # 定义颜色
 re="\033[0m"
@@ -218,7 +217,7 @@ export hy2_port=$udp_port
 
 get_argodomain() {
   if [[ -n $ARGO_AUTH ]]; then
-    echo "$ARGO_DOMAIN" > gdym.log
+    echo "$ARGO_DOMAIN" > ARGO_DOMAIN.log
     echo "$ARGO_DOMAIN"
   else
     local retry=0

@@ -274,14 +274,15 @@ argo_configure() {
     fi
     if [[ "$argo_choice" == "g" || "$argo_choice" == "G" ]]; then
         reading "请输入argo固定隧道域名: " ARGO_DOMAIN
-	echo "$ARGO_DOMAIN" > ARGO_DOMAIN.log
+	echo "$ARGO_DOMAIN" | tee ARGO_DOMAIN.log ARGO_DOMAIN_show.log > /dev/null
         green "你的argo固定隧道域名为: $ARGO_DOMAIN"
         reading "请输入argo固定隧道密钥（当你粘贴Token时，必须以ey开头）: " ARGO_AUTH
-	echo "$ARGO_AUTH" > ARGO_AUTH.log
+	echo "$ARGO_AUTH" | tee ARGO_AUTH.log ARGO_AUTH_show.log > /dev/null
         green "你的argo固定隧道密钥为: $ARGO_AUTH"
 	rm -rf boot.log
     else
         green "使用Argo临时隧道"
+	rm -rf ARGO_AUTH.log ARGO_DOMAIN.log
     fi
     break
 done
@@ -1329,15 +1330,15 @@ resargo(){
 if [[ -e $WORKDIR/config.json ]]; then
 cd $WORKDIR
 argogdshow(){
-if [ -f ARGO_AUTH.log ]; then
 echo
+if [ -f ARGO_AUTH_show.log ]; then
 argoport=$(jq -r '.inbounds[4].listen_port' config.json)
 purple "如果你想设置原先的Argo固定隧道，请明确以下三点"
-purple "1：已设置Argo固定域名：$(cat ARGO_DOMAIN.log)"
-purple "2：固定隧道token：$(cat ARGO_AUTH.log)"
+purple "1：已设置Argo固定域名：$(cat ARGO_DOMAIN_show.log)"
+purple "2：固定隧道token：$(cat ARGO_AUTH_show.log)"
 purple "3：检查CF官网的ARGO固定隧道端口：$argoport"
-echo
 fi
+echo
 }
 if [ -f boot.log ]; then
 green "当前正在使用Argo临时隧道"
@@ -1350,17 +1351,17 @@ argo_configure
 ps aux | grep '[t]unnel --u' | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
 ps aux | grep '[t]unnel --n' | awk '{print $2}' | xargs -r kill -9 > /dev/null 2>&1
 agg=$(cat ag.txt)
-if [[ ! -f boot.log ]] && [[ "$argo_choice" =~ (G|g) ]]; then
+if [[ "$argo_choice" =~ (G|g) ]]; then
 if [ "$hona" = "serv00" ]; then
-sed -i '' -e "15s|''|'$(cat ARGO_DOMAIN.log)'|" ~/serv00keep.sh
-sed -i '' -e "16s|''|'$(cat ARGO_AUTH.log)'|" ~/serv00keep.sh
+sed -i '' -e "15s|''|'$(cat ARGO_DOMAIN_show.log)'|" ~/serv00keep.sh
+sed -i '' -e "16s|''|'$(cat ARGO_AUTH_show.log)'|" ~/serv00keep.sh
 fi
-args="tunnel --no-autoupdate run --token $(cat ARGO_AUTH.log)"
+args="tunnel --no-autoupdate run --token $(cat ARGO_AUTH_show.log)"
 else
 rm -rf boot.log
 if [ "$hona" = "serv00" ]; then
-sed -i '' -e "15s|'$(cat ARGO_DOMAIN.log)'|''|" ~/serv00keep.sh
-sed -i '' -e "16s|'$(cat ARGO_AUTH.log)'|''|" ~/serv00keep.sh
+sed -i '' -e "15s|'$(cat ARGO_DOMAIN_show.log)'|''|" ~/serv00keep.sh
+sed -i '' -e "16s|'$(cat ARGO_AUTH_show.log)'|''|" ~/serv00keep.sh
 fi
 args="tunnel --url http://localhost:$argoport --no-autoupdate --logfile boot.log --loglevel info"
 fi
@@ -1475,19 +1476,16 @@ green "UUID密码：$showuuid"
 else
 yellow "Sing-box主进程启动失败，建议选择8重置端口，再选择9卸载重装"
 fi
-if [ -f "$WORKDIR/boot.log" ] && grep -q "trycloudflare.com" "$WORKDIR/boot.log"; then
+if [ -f "$WORKDIR/boot.log" ]; then
 argosl=$(cat "$WORKDIR/boot.log" 2>/dev/null | grep -a trycloudflare.com | awk 'NR==2{print}' | awk -F// '{print $2}' | awk '{print $1}')
 checkhttp=$(curl -o /dev/null -s -w "%{http_code}\n" "https://$argosl")
-[ "$checkhttp" -eq 404 ] && check="域名有效" || check="域名可能无效"
+[ "$checkhttp" -eq 404 ] && check="域名有效" || check="域名无效"
 green "Argo临时域名：$argosl  $check"
-fi
-if [ -f "$WORKDIR/boot.log" ] && ! grep -q "trycloudflare.com" "$WORKDIR/boot.log"; then
-yellow "Argo临时域名暂时不存在"
 fi
 if [ ! -f "$WORKDIR/boot.log" ]; then
 argogd=$(cat $WORKDIR/ARGO_DOMAIN.log 2>/dev/null)
 checkhttp=$(curl --max-time 2 -o /dev/null -s -w "%{http_code}\n" "https://$argogd")
-[ "$checkhttp" -eq 404 ] && check="域名有效" || check="域名可能无效"
+[ "$checkhttp" -eq 404 ] && check="域名有效" || check="域名无效"
 green "Argo固定域名：$argogd $check"
 fi
 if [ "$hona" = "serv00" ]; then
